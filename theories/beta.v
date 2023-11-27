@@ -276,37 +276,53 @@ Proof.
 Qed.
 
 (** This proof DOES NOT require computing the SN height of a and u⌈a⌉@*l 
-     which gives a major improvement over the previous version in the 
-     coq-terms project, and also depart from the proof in Krivines book *)
-#[local] Lemma term_beta_sn_app_rec a b : 
+     which gives a major simplification over the previous version in the 
+     coq-terms project, and also departs from the proof in Krivine's book *)
+
+#[local] Hint Constructors clos_trans : core.
+#[local] Hint Resolve Acc_clos_trans_rinv
+                      term_beta_app term_beta_replace 
+                      term_betaplus_app
+                      term_beta_app_middle : core.
+
+Local Lemma term_beta_sn_app_rec a b : 
           SN a -> SN b -> forall u l, b = u⌈a⌉@*l -> SN (λ u @* a::l).
 Proof.
-  intros Ha Hb%Acc_clos_trans; pattern a, b; revert a b Ha Hb.
-  apply Acc_lex_rect.
-  intros a ? Ha Hm IHa IHb u m ->.
+  unfold SN.
+  (** We use the Acc_lex_rinv_special_rect induction principle
+        and reformat the IH in a nicer way *) 
+  intros Ha Hb; pattern a, b; revert a b Ha Hb.
+  apply Acc_lex_rinv_special_rect.
+  intros a ? Ha Hm IH1 IH2 u m ->.
+  specialize (fun u a' l H1 H2 => IH1 a' _ H1 H2 u l eq_refl).
+  specialize (fun v l H => IH2 _ H v l eq_refl).
 
-  constructor; intros ? 
+  (** Now we can proceed with the proof with the proper IH
+      First the Acc constructor and then case analysis on the
+      possible successors of λu @* a::m which are
+        + u⌈a⌉ @* m                  (Hm works)
+        + λv @* a::m with u -β-> v   (IH2 works)
+        + λu @* b::m with a -β-> b   (IH1 works)
+        + λu @* a::m' with m -β-> m'
+             at one position in m    (IH2 works)
+    *)
+  constructor.
+  intros ? 
         [ (c & -> & [ -> | [ (v & -> & ?) | (b & -> & ?) ] ]%term_beta_redex_inv) 
         | (l & p & q & r & -> & -> & ?) ]%term_beta_app_inv.
-  + revert Hm; apply Acc_incl; now constructor 1.
-  + (* v⌈a⌉ @* m is smaller than u⌈a⌉ @* m *)
-    apply IHb with (2 := eq_refl).
-    apply clos_trans_rinv, term_betaplus_app.
-    constructor 1.
-    now apply term_beta_replace.
-  + (* b is smaller than a *) 
-    apply IHa with (1 := H) (3 := eq_refl).
-    (* either u⌈a⌉ = u⌈b⌉ or
-       u⌈b⌉ @* m is smaller than u⌈a⌉ @* m *)
-    destruct term_replace_betaplus with (u := u) (1 := H)
-      as [ <- | ? ]; auto.
-    apply Acc_inv with (1 := Hm).
-    apply clos_trans_rinv.
-    now apply term_betaplus_app.
-  + (* u⌈a⌉ @* l++q::r is smaller than u⌈a⌉ @* l++p::r *)
-    apply IHb with (2 := eq_refl).
-    constructor 1.
-    now apply term_beta_app_middle.
+  + (**  u⌈a⌉ @* m *)
+    trivial.
+  + (** u⌈a⌉ @* m  -β->  v⌈a⌉ @* m *)
+    apply IH2; auto.
+  + (** a -β-> b *) 
+    apply IH1; auto.
+    (** either u⌈a⌉ = u⌈b⌉
+        or     u⌈a⌉ @* m  -β+>  u⌈b⌉ @* m *)
+    destruct term_replace_betaplus
+      with (u := u) (1 := H)
+      as [ <- | ]; eauto.
+  + (* u⌈a⌉ @* l++p::r  -β>  u⌈a⌉ @* l++q::r *)
+    apply IH2; eauto.
 Qed.
 
 Theorem term_beta_sn_app u a l : SN a -> SN (u⌈a⌉@*l) -> SN (λ u @* a::l).

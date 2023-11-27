@@ -197,9 +197,14 @@ Notation "↑" := (@syn_lift _).
 Notation "u ⌈ v ⌉" := (@syn_subst _ u (v∷£)).
 Notation "⇑ Γ" := (fun x => ↑(Γ x)) (at level 1, format "⇑ Γ").
 
-Notation "A ⇨ B" := (@syn_bin _ A B) (at level 60, format "A ⇨ B").
-Notation "∀" := (@syn_abs _).
+Notation "A ⇨ B" := (@syn_bin _ A B) (at level 60, only parsing).
+Notation "∀ A" := (@syn_abs _ A) (at level 60, only parsing).
 
-Notation "u @ v" := (@syn_bin _ u v) (at level 50,format "u @ v").
-Notation λ := (@syn_abs _).
+Notation "A ⇨ B" := (@syn_bin false A B) (at level 60, format "A ⇨ B", only printing).
+Notation "∀ A" := (@syn_abs false A) (at level 60, format "∀ A", only printing).
 
+Notation "u @ v" := (@syn_bin _ u v) (at level 50, only parsing).
+Notation "'λ' u" := (@syn_abs _ u) (at level 50, only parsing).
+
+Notation "u @ v" := (@syn_bin true u v) (at level 50, format "u @ v", only printing).
+Notation "'λ' u" := (@syn_abs true u) (at level 50, format "λ u", only printing).

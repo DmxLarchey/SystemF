@@ -51,6 +51,21 @@ Section closure_t_rt.
 
 End closure_t_rt.
 
+Fact Acc_inv_clos_trans X (R : X -> X -> Prop) x :
+     Acc R x -> forall y, clos_trans R y x -> Acc R y.
+Proof.
+  intros ?%Acc_clos_trans y Hy.
+  generalize (Acc_inv H Hy).
+  apply Acc_incl; now constructor 1.
+Qed.
+
+Fact Acc_clos_trans_rinv X (R : X -> X -> Prop) x y :
+       clos_trans R x y -> Acc (rinv R) x -> Acc (rinv R) y.
+Proof.
+  intros H1%clos_trans_rinv H2.
+  now apply Acc_inv_clos_trans with (1 := H2).
+Qed.
+
 Section Acc_lex_product_rect.
 
   Variables (X Y : Type) 
@@ -89,6 +104,29 @@ Section Acc_lex_product_rect.
   End Acc_product_rect.
 
 End Acc_lex_product_rect.
+
+Section Acc_lex_rinv_rect.
+
+  Variables (X : Type) (R : X -> X -> Prop)
+            (P : X -> X -> Type)
+            (HP : forall a b, Acc (rinv R) a 
+                           -> Acc (rinv R) b 
+                           -> (forall a' b', R a a' -> Acc (rinv R) b' -> P a' b')
+                           -> (forall b', clos_trans R b b' -> P a b')
+                           -> P a b).
+
+  Theorem Acc_lex_rinv_special_rect a b : Acc (rinv R) a -> Acc (rinv R) b -> P a b.
+  Proof.
+    intros Ha Hb%Acc_clos_trans; pattern a, b; revert a b Ha Hb.
+    apply Acc_lex_rect.
+    intros a b Ha Hb IHa IHb.
+    apply HP; auto.
+    + revert Hb; apply Acc_incl; now constructor 1.
+    + intros a' b' ? ?%Acc_clos_trans; eauto.
+    + intros x Hx%clos_trans_rinv; eauto.
+  Qed.
+
+End Acc_lex_rinv_rect.
 
 Section prod_list.
 

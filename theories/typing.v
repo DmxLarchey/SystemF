@@ -33,22 +33,16 @@ where "Γ ⊢ u ∶ A" := (F_Typing_Judgement Γ u A).
 
 #[global] Hint Constructors F_Typing_Judgement : core.
 
-(* Notation for terms and types still overlap, damnit *)
-Print F_Typing_Judgement.
-
 Fact FTJ_var Γ n A : Γ n = A -> Γ ⊢ £n ∶ A.
 Proof. intros <-; constructor. Qed.
+
+#[global] Hint Resolve FTJ_var : core.
 
 Definition term_id : term := λ(£0).
 Definition type_id : type := ∀(£0⇨£0).
 
 Fact FTJ_id Γ : Γ ⊢ term_id ∶ type_id.
-Proof.
-  constructor.
-  constructor.
-  simpl.
-  now apply FTJ_var.
-Qed.
+Proof. do 2 constructor; eauto. Qed.
 
 #[local] Hint Resolve in_or_app in_eq in_cons : core.
 
@@ -71,24 +65,14 @@ Proof.
   + constructor; eauto.
 Qed.
 
-(*
-Fact eq_goal (A B : Type) : A = B -> A -> B.
-Proof. now intros []. Qed.
-*)
-
 (* F typing judgements are closed under substituion of types *)
-Lemma FTJ_type_subst Γ u A f :
+Fact FTJ_type_subst Γ u A f :
           Γ ⊢ u ∶ A
        -> (fun x => syn_subst (Γ x) f) ⊢ u ∶ syn_subst A f.
 Proof.
   induction 1 as [ G x | G u A B H1 IH1 | G u v A B H1 IH1 H2 IH2 | G u A H1 IH1 | G u A B H1 IH1 ]
-    in f |- *; simpl.
-  + now apply FTJ_var.
+    in f |- *; simpl; eauto.
   + constructor 2; apply FTJ_ext with (2 := IH1 f); now intros [].
-  + constructor 3 with (syn_subst A f); 
-    [ apply FTJ_ext with (2 := IH1 f) 
-    | apply FTJ_ext with (2 := IH2 f) ];
-      now intros [].
   + constructor.
     match goal with 
       |- _ ⊢ _ ∶ syn_subst _ ?f => generalize (IH1 f)
@@ -103,7 +87,7 @@ Proof.
 Qed.
 
 (* F typing judgements are closed under renaming of types *)
-Corollary FTJ_type_ren Γ u A f :
+Fact FTJ_type_ren Γ u A f :
           Γ ⊢ u ∶ A
        -> (fun x => syn_ren (Γ x) f) ⊢ u ∶ syn_ren A f.
 Proof.
@@ -114,10 +98,8 @@ Proof.
   intros; now rewrite syn_ren_eq_subst.
 Qed.
 
-#[local] Hint Resolve FTJ_var In_list_pred : core.
-
 (* F typing judgements are closed under renaming of terms *)
-Lemma FTJ_term_ren Γ Δ A u f :
+Fact FTJ_term_ren Γ Δ A u f :
             Γ ⊢ u ∶ A
          -> (forall x, x ∈ syn_vars u -> Δ (f x) = Γ x)
          -> Δ ⊢ syn_ren u f ∶ A.
@@ -127,14 +109,14 @@ Proof.
     simpl; intros Δ f H; eauto.
   + constructor.
     apply IH1.
-    intros [] ?; simpl; eauto.
+    intros []; simpl; eauto.
   + constructor 3 with A; eauto.
   + constructor; apply IH1.
     intros; f_equal; eauto.
 Qed.
 
 (* F typing judgements are closed under substitution of terms *)
-Lemma FTJ_term_subst Γ Δ C u f :
+Fact FTJ_term_subst Γ Δ C u f :
             Γ ⊢ u ∶ C
          -> (forall x, x ∈ syn_vars u -> Δ ⊢ f x ∶ Γ x)
          -> Δ ⊢ syn_subst u f ∶ C.
@@ -144,10 +126,9 @@ Proof.
      simpl; intros Δ f H; eauto.
    + constructor 2.
      apply IH1.
-     intros [|x] Hx; simpl.
-     * now apply FTJ_var.
-     * apply In_list_pred, H in Hx.
-       apply FTJ_term_ren with (1 := Hx); auto.
+     intros [|x] Hx; simpl; eauto.
+     apply In_list_pred, H in Hx.
+     apply FTJ_term_ren with (1 := Hx); auto.
    + constructor 3 with A; eauto.
    + constructor; apply IH1.
      intros; apply FTJ_type_ren; auto.
