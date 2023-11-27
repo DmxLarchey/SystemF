@@ -7,11 +7,10 @@
 (*        Mozilla Public License Version 2.0, MPL-2.0         *)
 (**************************************************************)
 
-Require Import List Relations Wellfounded.
-
+From Coq Require Import List.
 Import ListNotations.
 
-Require Import utils syntax beta typing.
+From SystemF Require Import utils syntax beta typing.
 
 Set Implicit Arguments.
 
@@ -219,7 +218,7 @@ Section semantics.
       apply type_sem_Nmodel; auto.
   Qed.
 
-  (* Strong Normalization for system F *)
+  (* Strong Normalization for Curry-style system F *)
   Theorem FTJ_beta_sn Γ u A : Γ ⊢ u ∶ A -> term_beta_sn u.
   Proof.
     intros H.

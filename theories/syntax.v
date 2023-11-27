@@ -7,11 +7,10 @@
 (*        Mozilla Public License Version 2.0, MPL-2.0         *)
 (**************************************************************)
 
-Require Import List.
-
+From Coq Require Import List.
 Import ListNotations.
 
-Require Import utils.
+From SystemF Require Import utils.
 
 Set Implicit Arguments.
 

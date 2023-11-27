@@ -7,15 +7,15 @@
 (*        Mozilla Public License Version 2.0, MPL-2.0         *)
 (**************************************************************)
 
-Require Import List Relations Wellfounded.
-
+From Coq Require Import List Relations Wellfounded.
 Import ListNotations.
 
-Require Import utils syntax.
+From SystemF Require Import utils syntax.
 
 Set Implicit Arguments.
 
-(* Beware the ∶ below is NOT THE SAME as the semicolumn : *)
+(* Beware the ∶ CHAR below is NOT THE SAME as the semicolumn : CHAR 
+   even if they look identical *)
 #[global] Reserved Notation "Γ ⊢ u ∶ A" (at level 70).
 
 Inductive F_Typing_Judgement : (nat -> type) -> term -> type -> Prop :=

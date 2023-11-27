@@ -7,11 +7,12 @@
 (*        Mozilla Public License Version 2.0, MPL-2.0         *)
 (**************************************************************)
 
-Require Import List Relations Wellfounded.
-
+From Coq Require Import List Relations Wellfounded.
 Import ListNotations.
 
-Require Import utils syntax.
+From SystemF Require Import utils syntax.
+
+Set Implicit Arguments.
 
 Reserved Notation "x '-β->' y" (at level 70).
 
@@ -275,16 +276,15 @@ Proof.
     apply (IH (λ k)); eauto.
 Qed.
 
-(** This proof DOES NOT require computing the SN height of a and u⌈a⌉@*l 
-     which gives a major simplification over the previous version in the 
-     coq-terms project, and also departs from the proof in Krivine's book *)
-
 #[local] Hint Constructors clos_trans : core.
 #[local] Hint Resolve Acc_clos_trans_rinv
                       term_beta_app term_beta_replace 
                       term_betaplus_app
                       term_beta_app_middle : core.
 
+(** This proof DOES NOT require computing the SN height of a and u⌈a⌉@*l 
+     which gives a major simplification over the previous version in the 
+     coq-terms project, and also departs from the proof in Krivine's book *)
 Local Lemma term_beta_sn_app_rec a b : 
           SN a -> SN b -> forall u l, b = u⌈a⌉@*l -> SN (λ u @* a::l).
 Proof.
