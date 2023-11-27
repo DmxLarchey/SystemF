@@ -193,18 +193,34 @@ Section semantics.
   Theorem FTJ_adequacy Γ u A :
         Γ ⊢ u ∶ A
      -> forall I f,
-            (forall x, Nmodel (I x))
+            (forall x, (* x ∈ syn_vars A -> *) Nmodel (I x))
          -> (forall x, type_sem (Γ x) I (f x))
          -> type_sem A I (syn_subst u f).
   Proof.
     induction 1 as [ G x | G u A B H1 IH1 | G u v A B H1 IH1 H2 IH2 | G u A H1 IH1 | G u A B H1 IH1 ];
-      intros I f HI Hf; simpl; eauto.
+      simpl; intros I f HI Hf; eauto.
     + intros w Hw.
-      refine (proj1 (type_sem_Nmodel B I (fun x _ => HI x)) _ _ [] _ _).
-  Admitted.
+      refine (proj1 (type_sem_Nmodel B I (fun x Hx => HI x)) _ _ [] _ _); auto.
+      * revert Hw; apply type_sem_Nmodel; eauto.
+      * simpl.
+        rewrite syn_subst_comp.
+        apply IH1; eauto.
+        intros []; simpl; auto.
+        now rewrite syn_lift_replace.
+    + apply IH1; auto. 
+      apply IH2; auto.
+    + intros P HP.
+      apply IH1.
+      * intros []; simpl; auto.
+      * intros x.
+        unfold syn_lift.
+        apply type_sem_ren; simpl; auto.
+    + apply type_sem_replace, IH1; auto.
+      apply type_sem_Nmodel; auto.
+  Qed.
 
   (* Strong Normalization for system F *)
-  Theorem FTJ_sn Γ u A : Γ ⊢ u ∶ A -> term_beta_sn u.
+  Theorem FTJ_beta_sn Γ u A : Γ ⊢ u ∶ A -> term_beta_sn u.
   Proof.
     intros H.
     apply FTJ_adequacy with (I := fun _ => N) (f := £) in H; auto.
@@ -218,3 +234,6 @@ Section semantics.
   Qed.
 
 End semantics.
+
+About FTJ_beta_sn.
+Print Assumptions FTJ_beta_sn.
