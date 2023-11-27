@@ -240,7 +240,7 @@ Qed.
 Fact term_beta_app_inv a b u m : 
           a @* b::m -β-> u
       -> (exists c, u = c @* m /\ a@b -β-> c)
-      \/ (exists l v w r, m = l++v::r /\ u = a @* (b::l++w::r) /\ v -β-> w).
+      \/ (exists l v w r, m = l++v::r /\ u = a @* b::l++w::r /\ v -β-> w).
 Proof.
   intros H; simpl in H.
   rewrite term_app_rapp in H.
