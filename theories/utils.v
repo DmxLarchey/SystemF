@@ -32,7 +32,13 @@ Section closure_t_rt.
   Proof. induction 1; eauto. Qed.
 
   Fact clos_trans_rinv R x y : clos_trans R x y <-> clos_trans (rinv R) y x.
-  Proof. split; now intros ?%clos_trans_rev'. Qed. 
+  Proof. split; now intros ?%clos_trans_rev'. Qed.
+
+  Local Fact clos_refl_trans_rev' R x y : clos_refl_trans R x y -> clos_refl_trans (rinv R) y x.
+  Proof. induction 1; eauto. Qed.
+
+  Fact clos_refl_trans_rinv R x y : clos_refl_trans R x y <-> clos_refl_trans (rinv R) y x.
+  Proof. split; now intros ?%clos_refl_trans_rev'. Qed.
 
   Fact clos_refl_trans_clos_trans R x y :
       clos_refl_trans R x y -> x = y \/ clos_trans R x y.
@@ -50,19 +56,17 @@ Section closure_t_rt.
 
 End closure_t_rt.
 
-Fact Acc_inv_clos_trans X (R : X -> X -> Prop) x :
-     Acc R x -> forall y, clos_trans R y x -> Acc R y.
-Proof.
-  intros ?%Acc_clos_trans y Hy.
-  generalize (Acc_inv H Hy).
-  apply Acc_incl; now constructor 1.
-Qed.
+#[local] Hint Resolve Acc_intro Acc_inv : core.
 
-Fact Acc_clos_trans_rinv X (R : X -> X -> Prop) x y :
-       clos_trans R x y -> Acc (rinv R) x -> Acc (rinv R) y.
+Fact Acc_inv_clos_refl_trans X (R : X -> X -> Prop) x y :
+     clos_refl_trans R y x -> Acc R x -> Acc R y.
+Proof. induction 1; eauto. Qed.
+
+Fact Acc_inv_clos_refl_trans_rinv X (R : X -> X -> Prop) x y :
+       clos_refl_trans R x y -> Acc (rinv R) x -> Acc (rinv R) y.
 Proof.
-  intros H1%clos_trans_rinv H2.
-  now apply Acc_inv_clos_trans with (1 := H2).
+  intros H1%clos_refl_trans_rinv.
+  now apply Acc_inv_clos_refl_trans.
 Qed.
 
 Section Acc_lex_product_rect.

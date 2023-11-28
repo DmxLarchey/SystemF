@@ -14,6 +14,8 @@ From SystemF Require Import utils syntax.
 
 Set Implicit Arguments.
 
+#[local] Hint Constructors clos_trans clos_refl_trans : core.
+
 Reserved Notation "x '-β->' y" (at level 70).
 
 Inductive term_beta : term -> term -> Prop :=
@@ -77,7 +79,7 @@ Proof. apply term_beta_subst. Qed.
 
 #[local] Hint Resolve in_or_app in_eq in_cons : core.
 
-Fact term_subst_betastar u f g :
+Fact term_betastar_subst u f g :
         (forall x, x ∈ syn_vars u -> f x -β*> g x)
      -> syn_subst u f -β*> syn_subst u g.
 Proof.
@@ -91,21 +93,10 @@ Proof.
     * apply term_betastar_ren; eauto.
 Qed.
 
-Fact term_subst_betaplus u f g : 
-        (forall x, x ∈ syn_vars u -> f x = g x \/ f x -β-> g x)
-     -> syn_subst u f = syn_subst u g \/ syn_subst u f -β+> syn_subst u g.
+Fact term_betastar_replace u a b : a -β*> b -> u⌈a⌉ -β*> u⌈b⌉.
 Proof.
-  intros H.
-  apply clos_refl_trans_clos_trans, term_subst_betastar.
-  intros ? [-> | ]%H.
-  + constructor 2.
-  + now constructor 1.
-Qed.
-
-Fact term_replace_betaplus u a b : a -β-> b -> u⌈a⌉ = u⌈b⌉ \/ u⌈a⌉ -β+> u⌈b⌉.
-Proof.
-  intros H; apply term_subst_betaplus.
-  intros []; simpl; auto.
+  intro; apply term_betastar_subst.
+  intros []; simpl; eauto.
 Qed.
 
 Fact term_beta_inv u w :
@@ -167,8 +158,13 @@ Proof. rewrite !term_app_rapp; apply term_beta_rapp. Qed.
 
 #[local] Hint Resolve term_beta_app term_beta_rapp : core.
 
+(*
 Fact term_betaplus_app u v l : u -β+> v -> u @* l -β+> v @* l.
 Proof. apply clos_trans_fun with (f := fun u => u @* l); eauto. Qed.
+*)
+
+Fact term_betastar_app u v l : u -β*> v -> u @* l -β*> v @* l.
+Proof. apply clos_refl_trans_fun with (f := fun u => u @* l); eauto. Qed.
 
 #[local] Hint Resolve term_beta_app : core.
 
@@ -276,11 +272,11 @@ Proof.
     apply (IH (λ k)); eauto.
 Qed.
 
-#[local] Hint Constructors clos_trans : core.
-#[local] Hint Resolve Acc_clos_trans_rinv
-                      term_beta_app term_beta_replace 
-                      term_betaplus_app
-                      term_beta_app_middle : core.
+#[local] Hint Resolve
+     term_beta_app term_beta_replace 
+     Acc_inv_clos_refl_trans_rinv
+       term_betastar_app term_betastar_replace
+     term_beta_app_middle : core.
 
 (** This proof DOES NOT require computing the SN height of a and u⌈a⌉@*l 
      which gives a major simplification over the previous version in the 
@@ -310,19 +306,20 @@ Proof.
   intros ? 
         [ (c & -> & [ -> | [ (v & -> & ?) | (b & -> & ?) ] ]%term_beta_redex_inv) 
         | (l & p & q & r & -> & -> & ?) ]%term_beta_app_inv.
-  + (**  u⌈a⌉ @* m *)
+  + (** SN (u⌈a⌉ @* m) *)
     trivial.
-  + (** u⌈a⌉ @* m  -β->  v⌈a⌉ @* m *)
-    apply IH2; auto.
-  + (** a -β-> b *) 
-    apply IH1; auto.
-    (** either u⌈a⌉ = u⌈b⌉
-        or     u⌈a⌉ @* m  -β+>  u⌈b⌉ @* m *)
-    destruct term_replace_betaplus
-      with (u := u) (1 := H)
-      as [ <- | ]; eauto.
-  + (* u⌈a⌉ @* l++p::r  -β>  u⌈a⌉ @* l++q::r *)
-    apply IH2; eauto.
+  + (** SN ((λv)@a @* m) *)
+    apply IH2.
+    (** u -β-> v entails u⌈a⌉ @* m  -β+>  v⌈a⌉ @* m *)
+    auto.
+  + (** SN ((λu)@b @* m) *)
+    apply IH1; trivial.
+    (** a -β-> b entails u⌈a⌉ @* m  -β*>  u⌈b⌉ @* m *)
+    eauto.
+  + (** SN (λu @* a :: l ++ q :: r) *)
+    apply IH2.
+    (** p -β-> q entails u⌈a⌉ @* l++p::r  -β->  u⌈a⌉ @* l++q::r *)
+    eauto.
 Qed.
 
 Theorem term_beta_sn_app u a l : SN a -> SN (u⌈a⌉@*l) -> SN (λ u @* a::l).
