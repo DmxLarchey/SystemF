@@ -147,7 +147,7 @@ Inductive term_beta_redex_invt f a : term -> Prop :=
   | term_beta_redex_invt2 b : a -β-> b -> term_beta_redex_invt f a (λ f @ b)
   .
 
-Fact term_beta_redex_inv f a v :
+Fact term_beta_redex_inv' f a v :
        λ f @ a -β-> v
     -> v = f⌈a⌉
     \/ (exists g, v = λ g @ a /\ f -β-> g)
@@ -158,7 +158,7 @@ Proof.
   inversion E; subst; eauto.
 Qed.
 
-Fact term_beta_redex_inv' f a v :
+Fact term_beta_redex_inv f a v :
        λ f @ a -β-> v -> term_beta_redex_invt f a v.
 Proof.
   intros [ (? & -> & (g & -> & ?)%term_beta_inv) 
@@ -302,7 +302,7 @@ Proposition term_beta_abs_app_inv u a m t :
           λ u @* a::m -β-> t -> term_beta_abs_app_invt u a m t.
 Proof.
   intros H%term_beta_app_inv.
-  induction H as [ m t H%term_beta_redex_inv' | ].
+  induction H as [ m t H%term_beta_redex_inv | ].
   + induction H; now constructor.
   + now constructor.
 Qed.
