@@ -62,8 +62,8 @@ Section semantics.
     intros v (x & m & -> & H1%prod_list_Acc).
     induction H1 as [ m _ IH ].
     constructor.
-    intros u Hu%term_var_app_beta_inv.
-    induction Hu.
+    intros u Hu%term_beta_var_app_inv.
+    destruct Hu.
     apply IH; now constructor.
   Qed.
 
@@ -72,6 +72,20 @@ Section semantics.
   Local Definition Nadapted P :=
             Nsaturated N
          /\ P ⊆₁ N~>P /\ N~>P ⊆₁ P~>N /\ P~>N ⊆₁ N.
+
+  Local Fact Nsaturated_N0 : ~ Nsaturated N0.
+  Proof.
+    intros C.
+    destruct (C (£0) (£0) []) as (x & l & H1 & _); simpl.
+    + constructor; intros _ []%term_beta_inv.
+    + exists 0, []; auto.
+    + simpl in H1.
+      destruct l as [ | l a _ ] using list_snoc_rect; try easy.
+      rewrite term_app_snoc in H1.
+      injection H1; clear H1; intros _ H1.
+      destruct l as [ | l ? _ ] using list_snoc_rect; try easy.
+      now rewrite term_app_snoc in H1.
+  Qed.
 
   Fact N0_Nadapted : Nadapted N0.
   Proof.
@@ -195,8 +209,8 @@ Section semantics.
   Theorem FTJ_adequacy Γ u A :
         Γ ⊢ u ∶ A
      -> forall I f,
-            (forall x, (* x ∈ syn_vars A -> *) Nmodel (I x))
-         -> (forall x, type_sem (Γ x) I (f x))
+            (forall x, (* x ∈ syn_vars A ++ flat_map (fun n => syn_vars (Γ n)) (syn_vars u) -> *) Nmodel (I x))
+         -> (forall n, n ∈ syn_vars u -> type_sem (Γ n) I (f n))
          -> type_sem A I (syn_subst u f).
   Proof.
     induction 1 as [ G x | G u A B H1 IH1 | G u v A B H1 IH1 H2 IH2 | G u A H1 IH1 | G u A B H1 IH1 ];
@@ -204,17 +218,18 @@ Section semantics.
     + intros w Hw.
       refine (proj1 (type_sem_Nmodel B I (fun x Hx => HI x)) _ _ [] _ _); auto.
       * revert Hw; apply type_sem_Nmodel; eauto.
+       (* intros; apply HI; eauto. *)
       * simpl.
         rewrite syn_subst_comp.
         apply IH1; eauto.
-        intros []; simpl; auto.
-        now rewrite syn_lift_replace.
+        intros [|n] Hn; simpl; auto.
+        rewrite syn_lift_replace; eauto.
     + apply IH1; auto. 
       apply IH2; auto.
     + intros P HP.
       apply IH1.
       * intros []; simpl; auto.
-      * intros x.
+      * intros x Hx.
         unfold syn_lift.
         apply type_sem_ren; simpl; auto.
     + apply type_sem_replace, IH1; auto.
@@ -229,11 +244,21 @@ Section semantics.
     + revert H.
       rewrite syn_subst_id.
       apply type_sem_Nmodel; auto.
-    + intros x.
+    + intros x _.
       cut (N0 (£ x)).
       * apply type_sem_Nmodel; auto.
       * now exists x, [].
   Qed.
+
+  (* Building the smallest Nmodel, ie type_sem (∀£0) I *)
+
+  (*
+  Fact type_sem_bot I : type_sem (∀£0) I ≡ N0.
+  Proof.
+    intros u; split.
+    + simpl; intros H; apply H, Nmodel_N0. 
+
+  *)
 
 End semantics.
 
