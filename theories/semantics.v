@@ -62,7 +62,8 @@ Section semantics.
     intros v (x & m & -> & H1%prod_list_Acc).
     induction H1 as [ m _ IH ].
     constructor.
-    intros u (l & v & w & r & -> & -> & ?)%term_var_app_beta_inv.
+    intros u Hu%term_var_app_beta_inv.
+    induction Hu.
     apply IH; now constructor.
   Qed.
 
