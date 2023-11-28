@@ -20,6 +20,19 @@ Set Implicit Arguments.
 Arguments clos_trans {_}.
 Arguments clos_refl_trans {_}.
 
+Theorem list_snoc_rect X (P : list X -> Type) :
+          P []
+       -> (forall l x, P l -> P (l++[x]))
+       -> forall l, P l.
+Proof.
+  intros H1 H2 l; revert P H1 H2.
+  induction l as [ | x l IHl ]; eauto.
+  intros P H1 H2.
+  apply IHl with (P := fun l => P (x::l)).
+  + apply (H2 []), H1.
+  + intros ? ?; apply (H2 (_::_)).
+Qed. 
+
 Section closure_t_rt.
 
   Variables (X : Type).
@@ -108,28 +121,40 @@ Section Acc_lex_product_rect.
 
 End Acc_lex_product_rect.
 
-Section Acc_lex_rinv_rect.
+Section Acc_rinv_lex_fun_rect.
 
-  Variables (X : Type) (R : X -> X -> Prop)
-            (P : X -> X -> Type)
-            (HP : forall a b, Acc (rinv R) a 
-                           -> Acc (rinv R) b 
-                           -> (forall a' b', R a a' -> Acc (rinv R) b' -> P a' b')
-                           -> (forall b', clos_trans R b b' -> P a b')
-                           -> P a b).
+  (** This tailored induction principle is specifically
+      designed to establish the following result called
+      term_beta_sn_app in beta.v:
 
-  Theorem Acc_lex_rinv_special_rect a b : Acc (rinv R) a -> Acc (rinv R) b -> P a b.
+           SN a -> SN (u⌈a⌉ @ *m) -> SN (λ u @* a::m)
+
+      where f and g are instantiated as 
+            f a u m := u⌈a⌉ @ *m 
+        and g a u m := λ u @* a::m
+      and P is just SN := Acc (rinv term_beta) *)
+
+  Variables (X Y Z K : Type) (R : X -> X -> Prop) (T : K -> K -> Prop)
+            (f g : X -> Y -> Z -> K)
+            (P : K -> Type)
+            (HP : forall x y z,
+                     Acc (rinv R) x
+                  -> Acc (rinv T) (f x y z)
+                  -> (forall x' y' z', R x x' -> Acc (rinv T) (f x' y' z') -> P (g x' y' z'))
+                  -> (forall y' z', T (f x y z) (f x y' z') -> P (g x y' z'))
+                  -> P (g x y z)).
+
+  Local Lemma Acc_lex_fun_rect_eq x k :
+      Acc (rinv R) x -> Acc (rinv T) k -> forall y z, k = f x y z -> P (g x y z).
   Proof.
-    intros Ha Hb%Acc_clos_trans; pattern a, b; revert a b Ha Hb.
-    apply Acc_lex_rect.
-    intros a b Ha Hb IHa IHb.
-    apply HP; auto.
-    + revert Hb; apply Acc_incl; now constructor 1.
-    + intros a' b' ? ?%Acc_clos_trans; eauto.
-    + intros x Hx%clos_trans_rinv; eauto.
+    intros H1 H2; pattern x, k; revert x k H1 H2; apply Acc_lex_rect.
+    intros; subst; eauto.
   Qed.
 
-End Acc_lex_rinv_rect.
+  Theorem Acc_rinv_lex_fun_rect x y z : Acc (rinv R) x -> Acc (rinv T) (f x y z) -> P (g x y z).
+  Proof. intros; eapply Acc_lex_fun_rect_eq; eauto. Qed.
+
+End Acc_rinv_lex_fun_rect.
 
 Section prod_list.
 

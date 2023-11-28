@@ -122,7 +122,6 @@ Proof.
 Qed.
 
 #[global] Reserved Notation "f '@*' l" (at level 61, left associativity).
-#[global] Reserved Notation "f '*@' l" (at level 61, left associativity).
 
 Fixpoint term_app f l : term :=
   match l with
@@ -131,75 +130,46 @@ Fixpoint term_app f l : term :=
   end
 where "f @* l" := (term_app f l).
 
-Fixpoint term_rapp f l : term :=
-  match l with
-  | nil  => f
-  | x::l => (f *@l) @ x
-  end
-where "f *@ l" := (term_rapp f l).
-
 Fact term_app_comp u l m : u @* (l++m) = u @* l @* m .
 Proof. induction l in u |- *; simpl; auto. Qed.
 
-Fact term_rapp_comp u l m : u *@ (l++m) = u *@ m *@ l.
-Proof. induction l; simpl; f_equal; auto. Qed.
-
-Fact term_app_rapp u l : u @* l = u *@ (rev l).
-Proof.
-  induction l as [ | ? l IHl ] in u |- *; simpl; auto.
-  now rewrite IHl, term_rapp_comp.
-Qed.
-
-Fact term_beta_rapp u v l : u -β-> v -> u *@ l -β-> v *@ l.
-Proof. intros; induction l; simpl; eauto. Qed.
+Fact term_app_snoc u l v : u @* (l++[v]) = (u @* l) @ v.
+Proof. now rewrite term_app_comp. Qed.
 
 Fact term_beta_app u v l : u -β-> v -> u @* l -β-> v @* l.
-Proof. rewrite !term_app_rapp; apply term_beta_rapp. Qed.
+Proof.
+  intros.
+  induction l using list_snoc_rect; auto.
+  rewrite !term_app_snoc; auto.
+Qed.
 
-#[local] Hint Resolve term_beta_app term_beta_rapp : core.
-
-(*
-Fact term_betaplus_app u v l : u -β+> v -> u @* l -β+> v @* l.
-Proof. apply clos_trans_fun with (f := fun u => u @* l); eauto. Qed.
-*)
+#[local] Hint Resolve term_beta_app : core.
 
 Fact term_betastar_app u v l : u -β*> v -> u @* l -β*> v @* l.
 Proof. apply clos_refl_trans_fun with (f := fun u => u @* l); eauto. Qed.
-
-#[local] Hint Resolve term_beta_app : core.
 
 Fact term_beta_app_middle a l u v r : 
         u -β-> v -> a @* l++u::r -β-> a @* l++v::r.
 Proof. intro; rewrite !term_app_comp; simpl; auto. Qed.
 
-Fact term_var_rapp_beta_inv x m u : 
-        £x *@ m -β-> u
-     -> exists l v w r, m = l++v::r /\ u = £x *@ l++w::r /\ v -β-> w.
-Proof.
-  induction m as [ | v m IHm ] in u |- *; simpl.
-  + intros []%term_beta_inv.
-  + intros [ (a & -> & H1) 
-         | [ (a & -> & H1)
-           | (a & H1 & H2) ]]%term_beta_inv.
-    * apply IHm in H1 as (l & u & w & r & -> & -> & H2).
-      exists (v::l), u, w, r; auto.
-    * exists [], v, a, m; auto.
-    * now destruct m.
-Qed.
-
 Fact term_var_app_beta_inv x m u : 
         £x @* m -β-> u
      -> exists l v w r, m = l++v::r /\ u = £x @* l++w::r /\ v -β-> w.
 Proof.
-  rewrite term_app_rapp. 
-  intros (l & v & w & r & H1 & H2 & H3)%term_var_rapp_beta_inv.
-  apply f_equal with (f := @rev _) in H1.
-  rewrite rev_involutive, rev_app_distr in H1.
-  simpl in H1; rewrite app_ass in H1; simpl in H1.
-  subst; exists (rev r), v, w, (rev l).
-  repeat split; auto.
-  rewrite term_app_rapp, rev_app_distr.
-  now simpl rev; rewrite !rev_involutive, app_ass.
+  induction m as [ | m v IHm ] in u |- * using list_snoc_rect.
+  + intros []%term_beta_inv.
+  + rewrite term_app_snoc.
+    intros [ (a & -> & H1) 
+         | [ (a & -> & H1)
+           | (a & H1 & H2) ]]%term_beta_inv.
+    * apply IHm in H1 as (l & u & w & r & -> & -> & H2).
+      exists l, u, w, (r++[v]); split; [ | split ]; auto.
+      - now rewrite app_ass.
+      - now rewrite <- term_app_snoc, app_ass.
+    * exists m, v, a, []; repeat split; auto.
+      now rewrite term_app_snoc.
+    * now destruct m using list_snoc_rect; 
+        [ | rewrite term_app_snoc in H1 ].
 Qed.
 
 Definition term_beta_normal u := forall v, ~ u -β-> v.
@@ -213,24 +183,30 @@ Definition term_neutral (u : term) :=
   | _   => True
   end.
 
-Fact term_beta_neutral_rapp_inv a u m : 
+Fact term_beta_neutral_app_inv a u m : 
         term_neutral a
-      -> a *@ m -β-> u
-      -> (exists a', u = a' *@ m /\ a -β-> a')
-      \/ (exists l v w r, m = l++v::r /\ u = a *@ (l++w::r) /\ v -β-> w).
+      -> a @* m -β-> u
+      -> (exists a', u = a' @* m /\ a -β-> a')
+      \/ (exists l v w r, m = l++v::r /\ u = a @* (l++w::r) /\ v -β-> w).
 Proof.
-  induction m as [ | b m IHm ] in a, u |- *; simpl; intros H1 H2.
+  induction m as [ | m b IHm ] in a, u |- * using list_snoc_rect; intros H1 H2.
   + left; now exists u.
-  + apply term_beta_inv in H2
+  + rewrite term_app_snoc in H2.
+    apply term_beta_inv in H2
       as [ (u' & -> & H2) 
        | [ (b' & -> & H2)
          | (k  & E & _) ] ].
     * apply IHm in H2
         as [ (a' & -> & ?) | (l & v & w & r & -> & -> & ?)]; auto.
-      - left; now exists a'.
-      - right; exists (b::l), v, w, r; auto.
-    * right; exists [], b, b', m; auto.
-    * destruct m; simpl in E; now subst.
+      - left; exists a'; now rewrite term_app_snoc.
+      - right; exists l, v, w, (r++[b]); repeat split; auto.
+        ++ now rewrite app_ass.
+        ++ now rewrite <- term_app_snoc, app_ass.
+    * right; exists m, b, b', []; repeat split; auto.
+      now rewrite term_app_snoc.
+    * destruct m using list_snoc_rect; 
+        [ simpl in E | rewrite term_app_snoc in E ]; 
+        now subst.
 Qed.
 
 Fact term_beta_app_inv a b u m : 
@@ -239,20 +215,18 @@ Fact term_beta_app_inv a b u m :
       \/ (exists l v w r, m = l++v::r /\ u = a @* b::l++w::r /\ v -β-> w).
 Proof.
   intros H; simpl in H.
-  rewrite term_app_rapp in H.
-  apply term_beta_neutral_rapp_inv in H
-    as [ (c & -> & H)
-       | (l & v & w & r & E1 & -> & H) ]; simpl; auto.
-  + left; exists c; split; auto; now rewrite term_app_rapp.
-  + right; exists (rev r), v, w, (rev l); split; [ | split ]; auto.
-    * rewrite <- (rev_involutive m), E1, rev_app_distr; simpl; now rewrite app_ass.
-    * rewrite term_app_rapp; f_equal.
-      rewrite rev_app_distr; simpl; now rewrite app_ass, !rev_involutive.
+  apply term_beta_neutral_app_inv in H
+    as [ (? & -> & ?)
+       | (? & ? & ? & ? & ? & -> & ?) ]; simpl; eauto.
+  right; do 4 eexists; eauto.
 Qed.
 
 Definition term_beta_sn := Acc (fun u v => term_beta v u).
 
 #[local] Notation SN := term_beta_sn.
+
+Fact term_betastar_sn u v : u -β*> v -> SN u -> SN v.
+Proof. apply Acc_inv_clos_refl_trans_rinv. Qed.
 
 Fact term_beta_sn_app_inv u :
        SN u
@@ -274,24 +248,22 @@ Qed.
 
 #[local] Hint Resolve
      term_beta_app term_beta_replace 
-     Acc_inv_clos_refl_trans_rinv
+     term_betastar_sn
        term_betastar_app term_betastar_replace
      term_beta_app_middle : core.
 
 (** This proof DOES NOT require computing the SN height of a and u⌈a⌉@*l 
-     which gives a major simplification over the previous version in the 
+     which gives a MAJOR SIMPLIFICATION over the previous version in the 
      coq-terms project, and also departs from the proof in Krivine's book *)
-Local Lemma term_beta_sn_app_rec a b : 
-          SN a -> SN b -> forall u l, b = u⌈a⌉@*l -> SN (λ u @* a::l).
+Lemma term_beta_sn_app a u m : SN a -> SN (u⌈a⌉ @* m) -> SN (λ u @* a::m).
 Proof.
-  unfold SN.
-  (** We use the Acc_lex_rinv_special_rect induction principle
-        and reformat the IH in a nicer way *) 
-  intros Ha Hb; pattern a, b; revert a b Ha Hb.
-  apply Acc_lex_rinv_special_rect.
-  intros a ? Ha Hm IH1 IH2 u m ->.
-  specialize (fun u a' l H1 H2 => IH1 a' _ H1 H2 u l eq_refl).
-  specialize (fun v l H => IH2 _ H v l eq_refl).
+  (** We use the tailored Acc_rinv_lex_fun_rect induction principle *) 
+  unfold SN; revert a u m;
+  apply Acc_rinv_lex_fun_rect
+    with (f := fun a u m => u⌈a⌉ @* m)
+         (g := fun a u m => λ u @* a::m);
+  fold SN;
+  intros a u m H1 H2 IH1 IH2.
 
   (** Now we can proceed with the proof with the proper IH
       First the Acc constructor and then case analysis on the
@@ -302,7 +274,7 @@ Proof.
         + λu @* a::m' with m -β-> m'
              at one position in m    (IH2 works)
     *)
-  constructor.
+  constructor; fold SN.
   intros ? 
         [ (c & -> & [ -> | [ (v & -> & ?) | (b & -> & ?) ] ]%term_beta_redex_inv) 
         | (l & p & q & r & -> & -> & ?) ]%term_beta_app_inv.
@@ -313,14 +285,12 @@ Proof.
     (** u -β-> v entails u⌈a⌉ @* m  -β+>  v⌈a⌉ @* m *)
     auto.
   + (** SN ((λu)@b @* m) *)
-    apply IH1; trivial.
-    (** a -β-> b entails u⌈a⌉ @* m  -β*>  u⌈b⌉ @* m *)
-    eauto.
+    apply IH1. 
+    * trivial.
+    * (** a -β-> b entails u⌈a⌉ @* m  -β*>  u⌈b⌉ @* m *)
+      eauto.
   + (** SN (λu @* a :: l ++ q :: r) *)
     apply IH2.
     (** p -β-> q entails u⌈a⌉ @* l++p::r  -β->  u⌈a⌉ @* l++q::r *)
     eauto.
 Qed.
-
-Theorem term_beta_sn_app u a l : SN a -> SN (u⌈a⌉@*l) -> SN (λ u @* a::l).
-Proof. intros ? H; now apply term_beta_sn_app_rec with (2 := H). Qed.

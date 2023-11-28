@@ -48,12 +48,13 @@ Section semantics.
     apply H, Hq.
   Qed.
 
-  Local Definition N0 u := exists x l, u = £x*@l /\ Forall N l.
+  Local Definition N0 u := exists x l, u = £x @* l /\ Forall N l.
 
   Local Fact N0_N_app u v : N0 u -> N v -> N0 (u@v).
   Proof.
     intros (x & l & -> & H1) H2.
-    exists x, (v::l); auto.
+    exists x, (l++[v]); rewrite term_app_snoc; split; eauto.
+    apply Forall_app; auto.
   Qed.
 
   Local Fact N0_inc_N : N0 ⊆₁ N.
@@ -61,7 +62,7 @@ Section semantics.
     intros v (x & m & -> & H1%prod_list_Acc).
     induction H1 as [ m _ IH ].
     constructor.
-    intros u (l & v & w & r & -> & -> & ?)%term_var_rapp_beta_inv.
+    intros u (l & v & w & r & -> & -> & ?)%term_var_app_beta_inv.
     apply IH; now constructor.
   Qed.
 
@@ -75,7 +76,8 @@ Section semantics.
   Proof.
     split; [ | split; [ | split ] ]; auto.
     + intros u (x & l & -> & Hl) p Hp.
-      exists x, (p::l); auto.
+      exists x, (l++[p]); rewrite term_app_snoc; split; auto.
+      apply Forall_app; auto.
     + apply sem_arrow_mono; auto.
     + intros u Hu.
       cut (N (u@£0)).
