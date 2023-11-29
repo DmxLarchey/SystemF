@@ -163,21 +163,6 @@ Proof.
   destruct H; eauto.
 Qed.
 
-#[global] Reserved Notation "f '@*' l" (at level 61, left associativity).
-
-Fixpoint term_app f l : term :=
-  match l with
-  | []   => f
-  | x::l => (f@x) @* l
-  end
-where "f @* l" := (term_app f l).
-
-Fact term_app_comp u l m : u @* (l++m) = u @* l @* m .
-Proof. induction l in u |- *; simpl; auto. Qed.
-
-Fact term_app_snoc u l v : u @* (l++[v]) = (u @* l) @ v.
-Proof. now rewrite term_app_comp. Qed.
-
 Fact term_beta_app u v l : u -β-> v -> u @* l -β-> v @* l.
 Proof.
   intros.

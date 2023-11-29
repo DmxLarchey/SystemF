@@ -213,22 +213,21 @@ Section semantics.
   Theorem FTJ_adequacy Γ u A :
         Γ ⊢ u ∶ A
      -> forall I f,
-            (forall x, (* x ∈ syn_vars A ++ flat_map (fun n => syn_vars (Γ n)) (syn_vars u) -> *) Nmodel (I x))
+            (forall x, (* x ∈ syn_vars A \/ x ∈ syn_vars (Γ n) -> *) Nmodel (I x))
          -> (forall n, n ∈ syn_vars u -> type_sem (Γ n) I (f n))
          -> type_sem A I (syn_subst u f).
   Proof.
     induction 1 as [ G x | G u A B H1 IH1 | G u v A B H1 IH1 H2 IH2 | G u A H1 IH1 | G u A B H1 IH1 ];
       simpl; intros I f HI Hf; eauto.
     + intros w Hw.
-      refine (proj1 (type_sem_Nmodel B I (fun x Hx => HI x)) _ _ [] _ _); auto.
+      refine (proj1 (type_sem_Nmodel B I _) _ _ [] _ _); eauto.
       * revert Hw; apply type_sem_Nmodel; eauto.
-       (* intros; apply HI; eauto. *)
       * simpl.
         rewrite syn_subst_comp.
         apply IH1; eauto.
         intros [|n] Hn; simpl; auto.
         rewrite syn_lift_replace; eauto.
-    + apply IH1; auto. 
+    + apply IH1; auto.
       apply IH2; auto.
     + intros P HP.
       apply IH1.
@@ -240,31 +239,69 @@ Section semantics.
       apply type_sem_Nmodel; auto.
   Qed.
 
+  Theorem FTJ_adequacy' Γ u A :
+        Γ ⊢ u ∶ A
+     -> forall I,
+            (forall x, Nmodel (I x))
+         -> (forall n, n ∈ syn_vars u -> type_sem (Γ n) I (£ n))
+         -> type_sem A I u.
+  Proof.
+    intros H I H1 H2.
+    rewrite <- syn_subst_id.
+    now apply (FTJ_adequacy H).
+  Qed.
+
   (* Strong Normalization for Curry-style system F *)
   Theorem FTJ_beta_sn Γ u A : Γ ⊢ u ∶ A -> term_beta_sn u.
   Proof.
     intros H.
-    apply FTJ_adequacy with (I := fun _ => N) (f := £) in H; auto.
-    + revert H.
-      rewrite syn_subst_id.
-      apply type_sem_Nmodel; auto.
+    apply FTJ_adequacy' with (I := fun _ => N) in H; auto.
+    + revert H; apply type_sem_Nmodel; auto.
     + intros x _.
       cut (N0 (£ x)).
       * apply type_sem_Nmodel; auto.
       * now exists x, [].
   Qed.
 
+  Definition N1 u := N u /\ syn_vars u <> [].
+
+  Fact Nmodel_N1 : Nmodel N1.
+  Proof.
+    split; [ | split ].
+    + intros u a l H1 (H2 & H3); split; eauto.
+      contradict H3.
+      rewrite term_app_vars in H3 |- *; simpl in H3 |- *.
+      generalize (syn_replace_vars u a).
+      apply app_eq_nil in H3 as (-> & (-> & ->)%app_eq_nil).
+      rewrite <- !app_nil_end.
+      destruct (syn_vars (u⌈a⌉)) as [ | n ]; auto.
+      intros C; destruct (C n); simpl; auto.
+    + intros u Hu; split; auto.
+      destruct Hu as (x & l & -> & ?).
+      rewrite term_app_vars; now simpl.
+    + now intros ? [].
+  Qed.
+
   (* Building the smallest Nmodel, ie type_sem (∀£0) I *)
 
-  (*
-  Fact type_sem_bot I : type_sem (∀£0) I ≡ N0.
+  (* The smallest model does not contain any closed term *)
+  Fact type_sem_bot I : type_sem (∀£0) I ⊆₁ N1.
   Proof.
-    intros u; split.
-    + simpl; intros H; apply H, Nmodel_N0. 
+    intros u; simpl.
+    intros H; apply H, Nmodel_N1.
+  Qed.
 
-  *)
+  (* A term of type ∀£0 (bottom) cannot be closed *)
+  Theorem FTJ_bot Γ u : Γ ⊢ u ∶ ∀£0 -> syn_vars u <> [].
+  Proof.
+    intros H.
+    apply (@type_sem_bot (fun _ => N) u), (FTJ_adequacy' H); auto.
+    intros n _.
+    refine (proj1 (proj2 (type_sem_Nmodel _ (fun _ => N) _)) _ _); auto.
+    exists n, []; auto.
+  Qed.
 
 End semantics.
 
-About FTJ_beta_sn.
-Print Assumptions FTJ_beta_sn.
+Check FTJ_beta_sn.
+Check FTJ_bot.

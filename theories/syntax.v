@@ -40,6 +40,12 @@ Proof. induction l as [ | [] ]; simpl; eauto; intros []; eauto. Qed.
 Fact In_list_pred_iff l n : n ∈ list_pred l <-> S n ∈ l.
 Proof. split; auto. Qed.
 
+Fact list_pred_map_S l : list_pred (map S l) = l.
+Proof. induction l; simpl; f_equal; auto. Qed.
+
+Fact list_pred_app l m : list_pred (l++m) = list_pred l ++ list_pred m.
+Proof. induction l as [ | [] ]; simpl; f_equal; auto. Qed.
+
 #[local] Hint Resolve in_or_app : core.
 
 #[global] Reserved Notation "u ⌈ v ⌉" (at level 50, format "u ⌈ v ⌉").
@@ -84,6 +90,17 @@ Section syntax.
     apply IHA; intros [] ?; simpl; auto.
   Qed.
 
+  Fact syn_ren_vars A f : syn_vars (syn_ren A f) = map f (syn_vars A).
+  Proof.
+    induction A  as [ | | A IHA ] in f |- *; simpl; eauto.
+    + rewrite map_app; f_equal; auto.
+    + rewrite IHA; simpl; clear IHA.
+      induction (syn_vars A) as [ | [] ]; simpl; f_equal; eauto.
+  Qed.
+
+  Fact syn_lift_vars A : syn_vars (syn_lift A) = map S (syn_vars A).
+  Proof. apply syn_ren_vars. Qed.
+
   Fact syn_ren_id A : syn_ren A (fun x => x) = A.
   Proof. 
     induction A as [ | | A IHA ]; simpl; f_equal; eauto.
@@ -114,6 +131,17 @@ Section syntax.
       simpl; intros Hfg; simpl; f_equal; eauto.
     apply IHA.
     intros [] ?; simpl; f_equal; eauto.
+  Qed.
+
+  Fact syn_subst_vars A f : syn_vars (syn_subst A f) = flat_map (fun x => syn_vars (f x)) (syn_vars A).
+  Proof.
+    induction A  as [ | | A IHA ] in f |- *; eauto.
+    + simpl; now rewrite <- app_nil_end.
+    + simpl; rewrite flat_map_app; f_equal; auto.
+    + simpl syn_subst; simpl.
+      rewrite IHA; simpl; clear IHA.
+      induction (syn_vars A) as [ | [] ]; simpl; eauto.
+      now rewrite <- IHl, syn_lift_vars, list_pred_app, list_pred_map_S.
   Qed.
 
   Fact syn_subst_id A : syn_subst A syn_var = A.
@@ -163,6 +191,13 @@ Section syntax.
   Notation "↑" := syn_lift.
   Notation "u ⌈ v ⌉" := (syn_subst u (v∷£)).
 
+  Fact syn_replace_vars A B x : x ∈ syn_vars (A⌈B⌉) -> x ∈ list_pred (syn_vars A) ++ syn_vars B.
+  Proof.
+    rewrite syn_subst_vars.
+    intros ([|n] & H1 & H2)%in_flat_map; simpl in H2; eauto.
+    destruct H2 as [ -> | [] ]; eauto.
+  Qed.
+
   Fact syn_ren_replace A B f : 
        syn_ren (A⌈B⌉) f = (syn_ren A (0∷fun n => S (f n)))⌈syn_ren B f⌉.
   Proof.
@@ -207,3 +242,25 @@ Notation "'λ' u" := (@syn_abs _ u) (at level 50, only parsing).
 
 Notation "u @ v" := (@syn_bin true u v) (at level 50, format "u @ v", only printing).
 Notation "'λ' u" := (@syn_abs true u) (at level 50, format "λ u", only printing).
+
+#[global] Reserved Notation "f '@*' l" (at level 61, left associativity).
+
+Fixpoint term_app f l : term :=
+  match l with
+  | []   => f
+  | x::l => (f@x) @* l
+  end
+where "f @* l" := (term_app f l).
+
+Fact term_app_comp u l m : u @* (l++m) = u @* l @* m .
+Proof. induction l in u |- *; simpl; auto. Qed.
+
+Fact term_app_snoc u l v : u @* (l++[v]) = (u @* l) @ v.
+Proof. now rewrite term_app_comp. Qed.
+
+Fact term_app_vars u l : syn_vars (u @* l) = flat_map syn_vars (u::l).
+Proof.
+  induction l as [ | a l IHl ] in u |- *; simpl.
+  + now rewrite <- app_nil_end.
+  + rewrite IHl; simpl; now rewrite app_ass.
+Qed. 

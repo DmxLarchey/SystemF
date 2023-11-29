@@ -133,3 +133,10 @@ Proof.
    + constructor; apply IH1.
      intros; apply FTJ_type_ren; auto.
 Qed.
+
+(* This one does not hold, see below
+   Fact FTJ_vars_conclusion Γ C u : Γ ⊢ u ∶ C -> forall x, x ∈ syn_vars C -> exists n, n ∈ syn_vars u /\ x ∈ syn_vars (Γ n).
+*)
+
+Fact FTJ_cex_1 : (fun _ => ∀(£0)) ⊢ λ(£0) ∶ £0⇨£0.
+Proof. constructor; constructor 1 with (Γ := £0∷_). Qed.
