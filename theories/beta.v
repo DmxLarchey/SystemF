@@ -159,8 +159,7 @@ Proof. intros []; simpl; constructor; auto. Qed.
 Inductive term_beta_redex_shape f a : term -> Prop :=
   | term_beta_redex_shape0 : term_beta_redex_shape f a (f⌈a⌉)
   | term_beta_redex_shape1 g : f -β-> g -> term_beta_redex_shape f a (λ g @ a)
-  | term_beta_redex_shape2 b : a -β-> b -> term_beta_redex_shape f a (λ f @ b)
-  .
+  | term_beta_redex_shape2 b : a -β-> b -> term_beta_redex_shape f a (λ f @ b).
 
 Fact term_beta_redex_inv f a v : λ f @ a -β-> v -> term_beta_redex_shape f a v.
 Proof.
@@ -193,13 +192,12 @@ Definition term_neutral (u : term) :=
   | _   => True
   end.
 
-Inductive term_beta_neutral_app_invt a : list term -> term -> Prop :=
-  | term_beta_neutral_app_invt0 b m : a -β-> b -> term_beta_neutral_app_invt a m (b @* m)
-  | term_beta_neutral_app_invt1 l v w r : v -β-> w -> term_beta_neutral_app_invt a (l++v::r) (a @* l++w::r).
+Inductive term_beta_neutral_app_shape a : list term -> term -> Prop :=
+  | term_beta_neutral_app_shape0 b m : a -β-> b -> term_beta_neutral_app_shape a m (b @* m)
+  | term_beta_neutral_app_shape1 l v w r : v -β-> w -> term_beta_neutral_app_shape a (l++v::r) (a @* l++w::r).
 
 (** This is a key lemma for the results below, by snoc induction on m *)
-Lemma term_beta_neutral_app_inv a u m : 
-        term_neutral a -> a @* m -β-> u -> term_beta_neutral_app_invt a m u.
+Lemma term_beta_neutral_app_inv a u m : term_neutral a -> a @* m -β-> u -> term_beta_neutral_app_shape a m u.
 Proof.
   induction m as [ | m b IHm ] in a, u |- * using list_snoc_rect; intros H1 H2.
   + simpl in H2; constructor 1 with (1:= H2).
