@@ -48,6 +48,12 @@ Section semantics.
     apply H, Hq.
   Qed.
 
+  (* Nsaturated is stable under intersections *)
+  Local Fact Nsaturated_cap X (Q : X -> Prop) (f : X -> term -> Prop) :
+         (forall x, Q x -> Nsaturated (f x))
+      -> Nsaturated (fun u => forall x, Q x -> f x u).
+  Proof. intros H u a l H1 H2 ? ?; apply H; eauto. Qed. 
+
   Local Definition N0 u := exists x l, u = £x @* l /\ Forall N l.
 
   Local Fact N0_N_app u v : N0 u -> N v -> N0 (u@v).
@@ -148,10 +154,8 @@ Section semantics.
         - apply IHA; eauto.
         - apply IHB; eauto.
     + split; [ | split ].
-      * intros u a l Ha Hl P HP.
-        specialize (Hl P HP).
-        specialize (IHA (P∷I)).
-        destruct IHA as (G1 & G2 & G3); auto.
+      * apply Nsaturated_cap.
+        intros P HP; apply IHA.
         intros [] ?; simpl; auto; now apply H, In_list_pred.
       * intros u Hu P HP.
         apply IHA; auto.
