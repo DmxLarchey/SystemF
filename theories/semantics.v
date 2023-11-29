@@ -32,6 +32,7 @@ Section semantics.
 
   Local Definition N := term_beta_sn.
   
+  (* Saturation look like an inductive rule under which pre-models must be closed*) 
   Local Definition Nsaturated P := forall u a l, N a -> P (u⌈a⌉@*l) -> P ((λ u)@*(a::l)).
 
   Local Fact Nsaturated_N : Nsaturated N.
@@ -288,7 +289,8 @@ Section semantics.
 
   (* Building the smallest Nmodel, ie type_sem (∀£0) I *)
 
-  (* The smallest model does not contain any closed term *)
+  (** The smallest model does not contain any closed term 
+      Can we compute the smallest model more precisely ?? *)
   Fact type_sem_bot I : type_sem (∀£0) I ⊆₁ N1.
   Proof.
     intros u; simpl.

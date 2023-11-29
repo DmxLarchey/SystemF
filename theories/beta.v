@@ -16,14 +16,16 @@ Set Implicit Arguments.
 
 #[local] Hint Constructors clos_trans clos_refl_trans : core.
 
-Reserved Notation "x '-β->' y" (at level 70).
+#[global] Reserved Notation "x '-β->' y" (at level 70).
+#[global] Reserved Notation "x '-β+>' y" (at level 70).
+#[global] Reserved Notation "x '-β*>' y" (at level 70).
 
 Inductive term_beta : term -> term -> Prop :=
-  | in_beta_redex u v :         (λ u)@v -β-> u⌈v⌉  
+  | in_beta_redex u v :         (λ u)@v -β-> u⌈v⌉
   | in_beta_lft u v w : u -β-> v -> u@w -β-> v@w
   | in_beta_rt  u v w : u -β-> v -> w@u -β-> w@v
   | in_beta_abs u v   : u -β-> v -> λ u -β-> λ v
-where  " x '-β->' y " := (@term_beta x y).
+where  "x -β-> y" := (@term_beta x y).
 
 #[global] Hint Constructors term_beta : core.
 
@@ -36,8 +38,20 @@ Inductive term_beta_inv_app v : term -> term -> Prop :=
   | in_term_beta_inv_app_1 v
 *)
 
-Notation "x '-β+>' y" := (clos_trans term_beta x y) (at level 70).
-Notation "x '-β*>' y" := (clos_refl_trans term_beta x y) (at level 70).
+Fact term_beta_app u v l : u -β-> v -> u @* l -β-> v @* l.
+Proof.
+  intros.
+  induction l using list_snoc_rect; auto.
+  rewrite !term_app_snoc; auto.
+Qed.
+
+#[local] Hint Resolve term_beta_app : core.
+
+Fact term_beta_app_middle a l u v r : u -β-> v -> a @* l++u::r -β-> a @* l++v::r.
+Proof. intro; rewrite !term_app_comp; simpl; auto. Qed.
+
+Notation "x -β+> y" := (clos_trans term_beta x y).
+Notation "x -β*> y" := (clos_refl_trans term_beta x y).
 
 Fact term_betaplus_abs u v : u -β+> v -> λ u -β+> λ v.
 Proof. apply clos_trans_fun; eauto. Qed.
@@ -57,6 +71,9 @@ Proof. apply clos_trans_fun with (f := fun w => u@w); eauto. Qed.
 Fact term_betastar_rt u v w : v -β*> w -> u@v -β*> u@w.
 Proof. apply clos_refl_trans_fun with (f := fun w => u@w); eauto. Qed.
 
+Fact term_betastar_app u v l : u -β*> v -> u @* l -β*> v @* l.
+Proof. apply clos_refl_trans_fun with (f := fun u => u @* l); eauto. Qed.
+
 Fact term_beta_ren u v f : u -β-> v -> syn_ren u f -β-> syn_ren v f.
 Proof.
   induction 1 in f |- *; simpl; eauto.
@@ -65,7 +82,7 @@ Qed.
 
 #[local] Hint Resolve term_beta_ren : core.
 
-Fact term_betastar_ren u v f : u -β*> v -> syn_ren u f -β*> syn_ren v f. 
+Fact term_betastar_ren u v f : u -β*> v -> syn_ren u f -β*> syn_ren v f.
 Proof. apply clos_refl_trans_fun with (f := fun u => syn_ren u f); auto. Qed.
 
 Fact term_beta_subst u v f : u -β-> v -> syn_subst u f -β-> syn_subst v f.
@@ -128,7 +145,6 @@ Inductive term_beta_app_invt : term -> term -> Prop :=
   | term_beta_app_invt2 u v : term_beta_app_invt (λ u@v) (u⌈v⌉)
   .
 
-
 Fact term_beta_inv' u v :
     u -β-> v 
  -> match u with
@@ -153,6 +169,7 @@ Proof.
   inversion E; constructor.
 Qed.
 
+(*
 Fact term_beta_redex_inv' f a v :
        λ f @ a -β-> v
     -> v = f⌈a⌉
@@ -162,21 +179,7 @@ Proof.
   intros H%term_beta_redex_inv.
   destruct H; eauto.
 Qed.
-
-Fact term_beta_app u v l : u -β-> v -> u @* l -β-> v @* l.
-Proof.
-  intros.
-  induction l using list_snoc_rect; auto.
-  rewrite !term_app_snoc; auto.
-Qed.
-
-#[local] Hint Resolve term_beta_app : core.
-
-Fact term_beta_app_middle a l u v r : u -β-> v -> a @* l++u::r -β-> a @* l++v::r.
-Proof. intro; rewrite !term_app_comp; simpl; auto. Qed.
-
-Fact term_betastar_app u v l : u -β*> v -> u @* l -β*> v @* l.
-Proof. apply clos_refl_trans_fun with (f := fun u => u @* l); eauto. Qed.
+*)
 
 (** We study the successors of _ @* _ for the following forms
      - £_ @* _
