@@ -239,14 +239,18 @@ Section semantics.
       apply type_sem_Nmodel; auto.
   Qed.
 
-  Theorem FTJ_adequacy' Γ u A :
-        Γ ⊢ u ∶ A
-     -> forall I,
-            (forall x, Nmodel (I x))
-         -> (forall n, n ∈ syn_vars u -> type_sem (Γ n) I (£ n))
-         -> type_sem A I u.
+  (* Given a statement Γ ⊢ u ∶ A,
+      * if all type variables are interpreted by a model
+      * if any term n variable (occuring free in u) belongs
+        to the model of the type given by (Γ n)
+     then u belongs to the model of type A *)
+
+  Theorem FTJ_adequacy' Γ u A I :
+           (forall x, Nmodel (I x))
+        -> (forall n, n ∈ syn_vars u -> type_sem (Γ n) I (£ n))
+        -> Γ ⊢ u ∶ A -> type_sem A I u.
   Proof.
-    intros H I H1 H2.
+    intros H1 H2 H.
     rewrite <- syn_subst_id.
     now apply (FTJ_adequacy H).
   Qed.
@@ -295,7 +299,7 @@ Section semantics.
   Theorem FTJ_bot Γ u : Γ ⊢ u ∶ ∀£0 -> syn_vars u <> [].
   Proof.
     intros H.
-    apply (@type_sem_bot (fun _ => N) u), (FTJ_adequacy' H); auto.
+    apply (@type_sem_bot (fun _ => N)), FTJ_adequacy' with (3 := H); auto.
     intros n _.
     refine (proj1 (proj2 (type_sem_Nmodel _ (fun _ => N) _)) _ _); auto.
     exists n, []; auto.
