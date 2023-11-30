@@ -104,7 +104,7 @@ Section semantics.
     + intros u Hu.
       cut (N (u@£0)).
       2: apply Hu; now exists 0, [].
-      now intros []%term_beta_sn_app_inv.
+      now intros []%term_beta_sn_inv.
   Qed.
 
   Local Definition Nmodel P := Nsaturated P /\ N0 ⊆₁ P /\ P ⊆₁ N.

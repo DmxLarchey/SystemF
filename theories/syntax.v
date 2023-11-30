@@ -46,7 +46,10 @@ Proof. induction l; simpl; f_equal; auto. Qed.
 Fact list_pred_app l m : list_pred (l++m) = list_pred l ++ list_pred m.
 Proof. induction l as [ | [] ]; simpl; f_equal; auto. Qed.
 
-#[local] Hint Resolve in_or_app : core.
+#[local] Hint Resolve in_or_app in_eq in_cons : core.
+
+Fact list_pred_mono l m : incl l m -> incl (list_pred l) (list_pred m).
+Proof. revert m; induction l as [ | [] ]; intros [ | [] ] ? ?; easy || eauto. Qed.
 
 #[global] Reserved Notation "u ⌈ v ⌉" (at level 50, format "u ⌈ v ⌉").
 
@@ -221,6 +224,33 @@ Section syntax.
     now rewrite syn_lift_replace.
   Qed.
 
+  Fact syn_replace_notfree A B C : ~ 0 ∈ syn_vars A -> A⌈B⌉ = A⌈C⌉.
+  Proof. intro; apply syn_subst_ext; intros [] ?; simpl; tauto. Qed. 
+
+  Fact syn_replace_lift A B : ~ 0 ∈ syn_vars A -> ↑(A⌈B⌉) = A.
+  Proof.
+    intros H.
+    unfold syn_lift.
+    rewrite syn_ren_subst_comp.
+    rewrite <- syn_subst_id.
+    apply syn_subst_ext.
+    intros []; simpl; tauto.
+  Qed.
+
+  Fact syn_ren_var_eq_inv u f x : 
+         syn_var x = syn_ren u f -> exists y, u = syn_var y /\ x = f y.
+  Proof. destruct u; simpl; try easy; inversion 1; eauto. Qed.
+
+  Fact syn_ren_bin_eq_inv u f p q : 
+         syn_bin p q = syn_ren u f 
+      -> exists p' q', u = syn_bin p' q' /\ p = syn_ren p' f /\ q = syn_ren q' f.
+  Proof. destruct u; try easy; simpl; inversion 1; eauto. Qed.
+
+  Fact syn_ren_abs_eq_inv u f v : 
+         syn_abs v = syn_ren u f 
+      -> exists u', u = syn_abs u' /\ v = syn_ren u' (0∷(fun n  => S (f n))).
+  Proof. destruct u; try easy; simpl; inversion 1; eauto. Qed.
+
 End syntax.
 
 Notation type := (syntax false).
@@ -263,4 +293,10 @@ Proof.
   induction l as [ | a l IHl ] in u |- *; simpl.
   + now rewrite <- app_nil_end.
   + rewrite IHl; simpl; now rewrite app_ass.
-Qed. 
+Qed.
+
+Fact term_app_lift_replace t a l : (t @* map ↑ l)⌈a⌉ = t⌈a⌉ @* l.
+Proof.
+  induction l as [ | b l IHl ] in t |- *; simpl; auto.
+  rewrite IHl; simpl; now rewrite syn_lift_replace.
+Qed.

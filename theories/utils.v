@@ -121,6 +121,22 @@ Section Acc_lex_product_rect.
 
 End Acc_lex_product_rect.
 
+Section Acc_rinv_fun_rect.
+
+  Variables (X Y : Type) (R : Y -> Y -> Prop) (f g : X -> Y)
+            (P : Y -> Type)
+            (HP : forall x, Acc (rinv R) (f x)
+                         -> (forall x', R (f x) (f x') -> P (g x'))
+                         -> P (g x)).
+
+  Local Lemma Acc_rinv_fun_rect_eq y : Acc (rinv R) y -> forall x, y = f x -> P (g x).
+  Proof. induction 1; intros ? ->; eauto. Qed.
+
+  Theorem Acc_rinv_fun_rect x : Acc (rinv R) (f x) -> P (g x).
+  Proof. intros; eapply Acc_rinv_fun_rect_eq; eauto. Qed.
+
+End Acc_rinv_fun_rect.
+
 Section Acc_rinv_lex_fun_rect.
 
   (** This tailored induction principle is specifically

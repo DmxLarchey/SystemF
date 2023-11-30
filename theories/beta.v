@@ -29,6 +29,11 @@ where  "x -β-> y" := (@term_beta x y).
 
 #[global] Hint Constructors term_beta : core.
 
+#[local] Hint Resolve in_or_app in_app_or list_pred_mono syn_replace_vars : core.
+
+Fact term_beta_vars u v : u -β-> v -> incl (syn_vars v) (syn_vars u).
+Proof. unfold incl; induction 1; simpl; eauto; intros ? []%in_app_or; auto. Qed.
+
 (*
 Inductive term_beta_inv_abs u : term -> Prop :=
   | in_term_beta_inv_abs_0 v : u -β-> v -> term_beta_inv_abs u (λ v).
@@ -53,6 +58,9 @@ Proof. intro; rewrite !term_app_comp; simpl; auto. Qed.
 Notation "x -β+> y" := (clos_trans term_beta x y).
 Notation "x -β*> y" := (clos_refl_trans term_beta x y).
 
+Fact term_betastar_vars u v : u -β*> v -> incl (syn_vars v) (syn_vars u).
+Proof. unfold incl; induction 1; eauto; now apply term_beta_vars. Qed. 
+
 Fact term_betaplus_abs u v : u -β+> v -> λ u -β+> λ v.
 Proof. apply clos_trans_fun; eauto. Qed.
 
@@ -74,13 +82,18 @@ Proof. apply clos_refl_trans_fun with (f := fun w => u@w); eauto. Qed.
 Fact term_betastar_app u v l : u -β*> v -> u @* l -β*> v @* l.
 Proof. apply clos_refl_trans_fun with (f := fun u => u @* l); eauto. Qed.
 
+#[local] Hint Resolve term_betastar_lft term_betastar_rt : core.
+
 Fact term_beta_ren u v f : u -β-> v -> syn_ren u f -β-> syn_ren v f.
 Proof.
   induction 1 in f |- *; simpl; eauto.
   rewrite syn_ren_replace; constructor.
 Qed.
 
-#[local] Hint Resolve term_beta_ren : core.
+Fact term_beta_lift u v : u -β-> v -> ↑u -β-> ↑v.
+Proof. apply term_beta_ren. Qed.
+
+#[local] Hint Resolve term_beta_ren term_beta_lift : core.
 
 Fact term_betastar_ren u v f : u -β*> v -> syn_ren u f -β*> syn_ren v f.
 Proof. apply clos_refl_trans_fun with (f := fun u => syn_ren u f); auto. Qed.
@@ -120,6 +133,37 @@ Proof.
   intro; apply term_betastar_subst.
   intros []; simpl; eauto.
 Qed.
+
+Local Fact term_beta_ren_inv_rec u v :
+        u -β-> v
+     -> forall f u', u = syn_ren u' f 
+     -> exists v', v = syn_ren v' f /\ u' -β-> v'.
+Proof.
+  induction 1 as [ u v | u v w _ IH | u v w _ IH | u v _ IH ]; intros f u' E.
+  + apply syn_ren_bin_eq_inv in E as (u'' & v' & -> & 
+       (u' & -> & ->)%syn_ren_abs_eq_inv & ->).
+    exists (u'⌈v'⌉); split; auto.
+    rewrite syn_ren_subst_comp, syn_subst_ren_comp.
+    apply syn_subst_ext.
+    intros []; simpl; auto.
+  + apply syn_ren_bin_eq_inv in E as (u'' & w' & -> & -> & ->).
+    destruct (IH _ _ eq_refl) as (v' & -> & ?).
+    exists (v'@w'); eauto.
+  + apply syn_ren_bin_eq_inv in E as (w' & u'' & -> & -> & ->).
+    destruct (IH _ _ eq_refl) as (v' & -> & ?).
+    exists (w'@v'); eauto.
+  + apply syn_ren_abs_eq_inv in E as (u'' & -> & ->).
+    destruct (IH _ _ eq_refl) as (v' & -> & ?).
+    exists (λ v'); eauto.
+Qed.
+
+Fact term_beta_ren_inv u f w :
+        syn_ren u f -β-> w
+     -> exists v, w = syn_ren v f /\ u -β-> v.
+Proof. intros H; apply term_beta_ren_inv_rec with (2 := eq_refl) in H; auto. Qed.
+
+Fact term_beta_lift_inv u w : ↑u -β-> w -> exists v, w = ↑v  /\ u -β-> v.
+Proof. apply term_beta_ren_inv. Qed.
 
 (** We study inversions shapes for t -β-> _ *)
 
@@ -226,6 +270,11 @@ Proof.
   now constructor.
 Qed.
 
+Fact term_beta_var_app_inv' x m u :
+         £x @* m -β-> u
+      -> exists l v w r, m = l++v::r /\ u = £x @* l++w::r /\ v -β-> w.
+Proof. intros [ l v w r ]%term_beta_var_app_inv; exists l, v, w, r; auto. Qed.
+
 Inductive term_beta_ap_app_shape a b : list term -> term -> Prop :=
   | term_beta_ap_app_shape0 m t : a@b -β-> t -> term_beta_ap_app_shape a b m (t @* m)
   | term_beta_ap_app_shape1 l v w r : v -β-> w -> term_beta_ap_app_shape a b (l++v::r) ((a@b) @* l++w::r).
@@ -267,7 +316,7 @@ Definition term_beta_sn := Acc (fun u v => term_beta v u).
 Fact term_betastar_sn u v : u -β*> v -> SN u -> SN v.
 Proof. apply Acc_inv_clos_refl_trans_rinv. Qed.
 
-Fact term_beta_sn_app_inv u :
+Fact term_beta_sn_inv u :
        SN u
     -> match u with
        | £ _ => True
@@ -284,6 +333,12 @@ Proof.
   + constructor; intros k Hk.
     apply (IH (λ k)); eauto.
 Qed.
+
+Fact term_beta_sn_app_inv a m : SN (a @* m) -> SN a /\ Forall SN m.
+Proof.
+  induction m as [ | ? ? IHm ] in a |- *; simpl; auto.
+  intros [[]%term_beta_sn_inv ]%IHm; eauto.
+Qed. 
 
 #[local] Hint Resolve
      term_beta_app term_beta_replace 
@@ -333,3 +388,83 @@ Proof.
     (** v -β-> w entails u⌈a⌉ @* l++v::r  -β->  u⌈a⌉ @* l++w::r *)
     eauto.
 Qed.
+
+Fact term_beta_sn_subst u f : SN (syn_subst u f) -> SN u.
+Proof.
+  revert u; apply Acc_rinv_fun_rect; fold SN.
+  intros u Hu IHu.
+  constructor; intros v Hv.
+  now apply IHu, term_beta_subst.
+Qed.
+
+Fact term_beta_sn_replace u a : SN (u⌈a⌉) -> SN u.
+Proof. apply term_beta_sn_subst. Qed.
+
+Inductive CTX C : Prop :=
+  | in_CTX :   (forall a b, a -β-> b -> C⌈a⌉ -β-> C⌈b⌉)
+            -> (forall a u, term_neutral a 
+                       -> C⌈a⌉ -β-> u 
+                       -> (exists b, u = C⌈b⌉ /\ a -β-> b) 
+                       \/ (exists D, u = D⌈a⌉ /\ C -β-> D))
+            -> (forall D, C -β-> D -> CTX D)
+            -> CTX C.
+
+Lemma term_beta_sn_ctx_sig a u (C : sig CTX) : SN a -> SN ((proj1_sig C)⌈u⌈a⌉⌉) -> SN ((proj1_sig C)⌈λ u@a⌉).
+Proof.
+  unfold SN; revert a u C.
+  apply Acc_rinv_lex_fun_rect
+    with (f := fun a u C => (proj1_sig C)⌈u⌈a⌉⌉)
+         (g := fun a u C => (proj1_sig C)⌈λ u @ a⌉);
+  fold SN;
+  intros a u (C & HC) H1 H2 IH1 IH2; simpl in *.
+  constructor.
+  intros k Hk.
+  case HC; intros HC1 HC2 HC3.
+  apply HC2 in Hk as [ (b & -> & Hb%term_beta_redex_inv) | (D & -> & HD) ]; simpl; auto.
+  + destruct Hb as [ | g Hg | b Hb ]; auto.
+    * apply (IH2 _ (exist _ C HC)); simpl.
+      apply HC; eauto.
+    * apply (IH1 _ _ (exist _ C HC)); simpl; eauto.
+  + apply (IH2 _ (exist _ D (HC3 _ HD))); simpl; eauto.
+Qed.
+
+Theorem term_beta_sn_ctx a u C : CTX C -> SN a -> SN (C⌈u⌈a⌉⌉) -> SN (C⌈λ u@a⌉).
+Proof. intros HC; apply term_beta_sn_ctx_sig with (C := exist _ C HC). Qed.
+
+Theorem term_app_ctx m : Forall SN m -> CTX (£0 @* map ↑ m).
+Proof.
+  intros H%prod_list_Acc.
+  induction H as [ m _ IHm ].
+  split.
+  + intros a b Hab.
+    rewrite !term_app_lift_replace; eauto.
+  + intros a u Ha H.
+    rewrite term_app_lift_replace in H; simpl in H.
+    apply term_beta_neutral_app_inv in H; auto.
+    destruct H.
+    * left; exists b; split; auto.
+      now rewrite term_app_lift_replace.
+    * right; exists (£ 0 @* map ↑ (l++w::r)).
+      rewrite term_app_lift_replace; split; auto.
+      rewrite !map_app; simpl; eauto.
+  + intros q (l & v & w & r & (l' & r'' & -> & <- & 
+              (a & r' & ? & ? & ?)%map_eq_cons)%map_eq_app & -> & H2)%term_beta_var_app_inv'; subst.
+    apply term_beta_lift_inv in H2 as (b & -> & H2).
+    specialize (IHm (l'++b::r')).
+    rewrite map_app in IHm.
+    apply IHm; now constructor.
+Qed.
+
+(* An alternate, more modular proof *)
+Lemma term_beta_sn_app' a u m : SN a -> SN (u⌈a⌉ @* m) -> SN (λ u @* a::m).
+Proof.
+  intros H1 H2.
+  replace (λ u @* a::m) with ((£0 @* map ↑ m)⌈λ u @ a⌉).
+  + apply term_beta_sn_ctx; auto.
+    * apply term_app_ctx.
+      now apply term_beta_sn_app_inv in H2.
+    * now rewrite term_app_lift_replace.
+  + now rewrite term_app_lift_replace.
+Qed.
+  
+
