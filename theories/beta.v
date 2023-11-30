@@ -400,38 +400,19 @@ Qed.
 Fact term_beta_sn_replace u a : SN (u⌈a⌉) -> SN u.
 Proof. apply term_beta_sn_subst. Qed.
 
-Inductive CTX C : Prop :=
-  | in_CTX :   (forall a b, a -β-> b -> C⌈a⌉ -β-> C⌈b⌉)
+Inductive ctx C : Prop :=
+  | ctx_intro :(forall a b, a -β-> b -> C⌈a⌉ -β-> C⌈b⌉)
             -> (forall a u, term_neutral a 
                        -> C⌈a⌉ -β-> u 
                        -> (exists b, u = C⌈b⌉ /\ a -β-> b) 
                        \/ (exists D, u = D⌈a⌉ /\ C -β-> D))
-            -> (forall D, C -β-> D -> CTX D)
-            -> CTX C.
+            -> (forall D, C -β-> D -> ctx D)
+            -> ctx C.
 
-Lemma term_beta_sn_ctx_sig a u (C : sig CTX) : SN a -> SN ((proj1_sig C)⌈u⌈a⌉⌉) -> SN ((proj1_sig C)⌈λ u@a⌉).
-Proof.
-  unfold SN; revert a u C.
-  apply Acc_rinv_lex_fun_rect
-    with (f := fun a u C => (proj1_sig C)⌈u⌈a⌉⌉)
-         (g := fun a u C => (proj1_sig C)⌈λ u @ a⌉);
-  fold SN;
-  intros a u (C & HC) H1 H2 IH1 IH2; simpl in *.
-  constructor.
-  intros k Hk.
-  case HC; intros HC1 HC2 HC3.
-  apply HC2 in Hk as [ (b & -> & Hb%term_beta_redex_inv) | (D & -> & HD) ]; simpl; auto.
-  + destruct Hb as [ | g Hg | b Hb ]; auto.
-    * apply (IH2 _ (exist _ C HC)); simpl.
-      apply HC; eauto.
-    * apply (IH1 _ _ (exist _ C HC)); simpl; eauto.
-  + apply (IH2 _ (exist _ D (HC3 _ HD))); simpl; eauto.
-Qed.
+Fact ctx_SN : ctx ⊆₁ SN.
+Proof. induction 1; constructor; eauto. Qed.
 
-Theorem term_beta_sn_ctx a u C : CTX C -> SN a -> SN (C⌈u⌈a⌉⌉) -> SN (C⌈λ u@a⌉).
-Proof. intros HC; apply term_beta_sn_ctx_sig with (C := exist _ C HC). Qed.
-
-Theorem term_app_ctx m : Forall SN m -> CTX (£0 @* map ↑ m).
+Theorem term_app_ctx m : Forall SN m -> ctx (£0 @* map ↑ m).
 Proof.
   intros H%prod_list_Acc.
   induction H as [ m _ IHm ].
@@ -454,6 +435,31 @@ Proof.
     rewrite map_app in IHm.
     apply IHm; now constructor.
 Qed.
+
+Lemma term_beta_sn_ctx_sig a u (C : sig ctx) :
+           SN a
+        -> SN ((proj1_sig C)⌈u⌈a⌉⌉) 
+        -> SN ((proj1_sig C)⌈λ u@a⌉).
+Proof.
+  unfold SN; revert a u C.
+  apply Acc_rinv_lex_fun_rect
+    with (f := fun a u C => (proj1_sig C)⌈u⌈a⌉⌉)
+         (g := fun a u C => (proj1_sig C)⌈λ u @ a⌉);
+  fold SN;
+  intros a u (C & HC) H1 H2 IH1 IH2; simpl in *.
+  constructor.
+  intros k Hk.
+  case HC; intros HC1 HC2 HC3.
+  apply HC2 in Hk as [ (b & -> & Hb%term_beta_redex_inv) | (D & -> & HD) ]; simpl; auto.
+  + destruct Hb as [ | g Hg | b Hb ]; auto.
+    * apply (IH2 _ (exist _ C HC)); simpl.
+      apply HC; eauto.
+    * apply (IH1 _ _ (exist _ C HC)); simpl; eauto.
+  + apply (IH2 _ (exist _ D (HC3 _ HD))); simpl; eauto.
+Qed.
+
+Theorem term_beta_sn_ctx a u C : ctx C -> SN a -> SN (C⌈u⌈a⌉⌉) -> SN (C⌈λ u@a⌉).
+Proof. intros HC; apply term_beta_sn_ctx_sig with (C := exist _ C HC). Qed.
 
 (* An alternate, more modular proof *)
 Lemma term_beta_sn_app' a u m : SN a -> SN (u⌈a⌉ @* m) -> SN (λ u @* a::m).
