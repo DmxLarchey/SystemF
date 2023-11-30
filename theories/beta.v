@@ -20,11 +20,11 @@ Set Implicit Arguments.
 #[global] Reserved Notation "x '-β+>' y" (at level 70).
 #[global] Reserved Notation "x '-β*>' y" (at level 70).
 
-Inductive term_beta : term -> term -> Prop :=
-  | in_beta_redex u v :         (Ⲗ u)@v -β-> u⌈v⌉
-  | in_beta_lft u v w : u -β-> v -> u@w -β-> v@w
-  | in_beta_rt  u v w : u -β-> v -> w@u -β-> w@v
-  | in_beta_abs u v   : u -β-> v -> Ⲗ u -β-> Ⲗ v
+Inductive term_beta : term → term → Prop :=
+  | in_beta_redex u v :             (Ⲗ u)@v -β-> u⌈v⌉
+  | in_beta_lft u v w : u -β-> v   →   u@w -β-> v@w
+  | in_beta_rt  u v w : u -β-> v   →   w@u -β-> w@v
+  | in_beta_abs u v   : u -β-> v   →    Ⲗ u -β-> Ⲗ v
 where  "x -β-> y" := (@term_beta x y).
 
 #[global] Hint Constructors term_beta : core.
