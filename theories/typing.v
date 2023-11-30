@@ -18,17 +18,17 @@ Set Implicit Arguments.
    even if they look identical *)
 #[global] Reserved Notation "Γ ⊢ u ∶ A" (at level 70).
 
-Inductive F_Typing_Judgement : (nat -> type) -> term -> type -> Prop :=
-  | fty_var Γ x :              Γ ⊢ £x ∶ Γ x
-  | fty_arr_intro Γ u A B :  A∷Γ ⊢ u ∶ B 
-                         ->    Γ ⊢ Ⲗ u ∶ A⇨B
-  | fty_arr_elim Γ u v A B :   Γ ⊢ u ∶ A⇨B
-                         ->    Γ ⊢ v ∶ A
-                         ->    Γ ⊢ u@v ∶ B
-  | fty_abs_intro Γ u A :     ⇑Γ ⊢ u ∶ A
-                         ->    Γ ⊢ u ∶ ∇A
-  | fty_abs_elim Γ u A B :     Γ ⊢ u ∶ ∇A
-                         ->    Γ ⊢ u ∶ A⌈B⌉
+Inductive F_Typing_Judgement : (nat → type) → term → type → Prop :=
+  | fty_var Γ x :                Γ ⊢ £x ∶ Γ x
+  | fty_arr_intro Γ u A B  :   A∷Γ ⊢ u ∶ B 
+                           →     Γ ⊢ Ⲗ u ∶ A⇨B
+  | fty_arr_elim Γ u v A B :     Γ ⊢ u ∶ A⇨B
+                           →     Γ ⊢ v ∶ A
+                           →     Γ ⊢ u@v ∶ B
+  | fty_abs_intro Γ u A    :    ⇑Γ ⊢ u ∶ A
+                           →     Γ ⊢ u ∶ ∇A
+  | fty_abs_elim Γ u A B   :     Γ ⊢ u ∶ ∇A
+                           →     Γ ⊢ u ∶ A⌈B⌉
 where "Γ ⊢ u ∶ A" := (F_Typing_Judgement Γ u A).
 
 #[global] Hint Constructors F_Typing_Judgement : core.
