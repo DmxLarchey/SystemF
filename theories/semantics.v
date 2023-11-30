@@ -7,7 +7,7 @@
 (*        Mozilla Public License Version 2.0, MPL-2.0         *)
 (**************************************************************)
 
-From Coq Require Import List.
+From Coq Require Import List Utf8.
 Import ListNotations.
 
 From SystemF Require Import utils syntax beta typing.
@@ -33,7 +33,7 @@ Section semantics.
   Local Definition N := term_beta_sn.
   
   (* Saturation look like an inductive rule under which pre-models must be closed*) 
-  Local Definition Nsaturated P := forall u a l, N a -> P (u⌈a⌉@*l) -> P ((λ u)@*(a::l)).
+  Local Definition Nsaturated P := forall u a l, N a -> P (u⌈a⌉@*l) -> P ((Ⲗ u)@*(a::l)).
 
   Local Fact Nsaturated_N : Nsaturated N.
   Proof. intros ? ? ?; apply term_beta_sn_app. Qed.
@@ -41,7 +41,7 @@ Section semantics.
   Local Fact Nsaturated_right P Q : Nsaturated Q -> Nsaturated (P~>Q).
   Proof.
     intros HQ u a l Ha H q Hq.
-    change (Q ((λ u)@*(a::l)@*(q::nil))).
+    change (Q ((Ⲗ u)@*(a::l)@*(q::nil))).
     rewrite <- term_app_comp.
     simpl app.
     apply HQ; auto.
@@ -118,7 +118,7 @@ Section semantics.
     match A with
     | £ x => I x
     | A⇨B => type_sem A I ~> type_sem B I
-    | ∀ A => fun u => forall P, Nmodel P -> type_sem A (P∷I) u
+    | ∇ A => fun u => forall P, Nmodel P -> type_sem A (P∷I) u
     end.
 
   Hint Resolve in_or_app : core.
@@ -291,14 +291,14 @@ Section semantics.
 
   (** The smallest model does not contain any closed term 
       Can we compute the smallest model more precisely ?? *)
-  Fact type_sem_bot I : type_sem (∀£0) I ⊆₁ N1.
+  Fact type_sem_bot I : type_sem (∇£0) I ⊆₁ N1.
   Proof.
     intros u; simpl.
     intros H; apply H, Nmodel_N1.
   Qed.
 
   (* A term of type ∀£0 (bottom) cannot be closed *)
-  Theorem FTJ_bot Γ u : Γ ⊢ u ∶ ∀£0 -> syn_vars u <> [].
+  Theorem FTJ_bot Γ u : Γ ⊢ u ∶ ∇£0 -> 𝓥 u <> [].
   Proof.
     intros H.
     apply (@type_sem_bot (fun _ => N)), FTJ_adequacy' with (3 := H); auto.

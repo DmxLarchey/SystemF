@@ -7,7 +7,7 @@
 (*        Mozilla Public License Version 2.0, MPL-2.0         *)
 (**************************************************************)
 
-From Coq Require Import List Relations Wellfounded.
+From Coq Require Import List Relations Wellfounded Utf8.
 Import ListNotations.
 
 From SystemF Require Import utils syntax.
@@ -21,13 +21,13 @@ Set Implicit Arguments.
 Inductive F_Typing_Judgement : (nat -> type) -> term -> type -> Prop :=
   | fty_var Γ x :              Γ ⊢ £x ∶ Γ x
   | fty_arr_intro Γ u A B :  A∷Γ ⊢ u ∶ B 
-                         ->    Γ ⊢ λ u ∶ A⇨B
+                         ->    Γ ⊢ Ⲗ u ∶ A⇨B
   | fty_arr_elim Γ u v A B :   Γ ⊢ u ∶ A⇨B
                          ->    Γ ⊢ v ∶ A
                          ->    Γ ⊢ u@v ∶ B
   | fty_abs_intro Γ u A :     ⇑Γ ⊢ u ∶ A
-                         ->    Γ ⊢ u ∶ ∀A
-  | fty_abs_elim Γ u A B :     Γ ⊢ u ∶ ∀A
+                         ->    Γ ⊢ u ∶ ∇A
+  | fty_abs_elim Γ u A B :     Γ ⊢ u ∶ ∇A
                          ->    Γ ⊢ u ∶ A⌈B⌉
 where "Γ ⊢ u ∶ A" := (F_Typing_Judgement Γ u A).
 
@@ -38,8 +38,8 @@ Proof. intros <-; constructor. Qed.
 
 #[global] Hint Resolve FTJ_var : core.
 
-Definition term_id : term := λ(£0).
-Definition type_id : type := ∀(£0⇨£0).
+Definition term_id : term := Ⲗ(£0).
+Definition type_id : type := ∇(£0⇨£0).
 
 Fact FTJ_id Γ : Γ ⊢ term_id ∶ type_id.
 Proof. do 2 constructor; eauto. Qed.
@@ -138,5 +138,5 @@ Qed.
    Fact FTJ_vars_conclusion Γ C u : Γ ⊢ u ∶ C -> forall x, x ∈ syn_vars C -> exists n, n ∈ syn_vars u /\ x ∈ syn_vars (Γ n).
 *)
 
-Fact FTJ_cex_1 : (fun _ => ∀(£0)) ⊢ λ(£0) ∶ £0⇨£0.
+Fact FTJ_cex_1 : (fun _ => Ⲗ(£0)) ⊢ Ⲗ(£0) ∶ £0⇨£0.
 Proof. constructor; constructor 1 with (Γ := £0∷_). Qed.
