@@ -35,11 +35,11 @@ Fact term_beta_vars u v : u -β-> v → incl (𝓥 v) (𝓥 u).
 Proof. unfold incl; induction 1; simpl; eauto; intros ? []%in_app_or; auto. Qed.
 
 (*
-Inductive term_beta_inv_abs u : term -> Prop :=
-  | in_term_beta_inv_abs_0 v : u -β-> v -> term_beta_inv_abs u (Ⲗ v).
+Inductive term_beta_inv_abs u : term → Prop :=
+  | in_term_beta_inv_abs_0 v : u -β-> v → term_beta_inv_abs u (Ⲗ v).
 
-Inductive term_beta_inv_app v : term -> term -> Prop :=
-  | in_term_beta_inv_app_0 u u' : u -β-> u' -> term_beta_inv_app v u (u'@v)
+Inductive term_beta_inv_app v : term → term → Prop :=
+  | in_term_beta_inv_app_0 u u' : u -β-> u' → term_beta_inv_app v u (u'@v)
   | in_term_beta_inv_app_1 v
 *)
 
@@ -121,8 +121,8 @@ Proof.
     * apply term_betastar_ren; eauto.
 Qed.
 
-(** Notice that a -β-> b -> u⌈a⌉ -β-> u⌈b⌉
-            and a -β+> b -> u⌈a⌉ -β+> u⌈b⌉
+(** Notice that a -β-> b → u⌈a⌉ -β-> u⌈b⌉
+            and a -β+> b → u⌈a⌉ -β+> u⌈b⌉
     DO NOT HOLD because u might no contain
     any occurence of the variable 0 and hence,
     there would be no reduction because u⌈a⌉ = u⌈b⌉ = u⌈_⌉ *)
@@ -191,18 +191,18 @@ Proof. intros []; simpl; eauto. Qed.
 
 (*
 
-Inductive term_beta_lam_invt : term -> term -> Prop :=
-  | term_beta_lam_invt0 u v : u -β-> v -> term_beta_lam_invt (Ⲗ u) (Ⲗ v).
+Inductive term_beta_lam_invt : term → term → Prop :=
+  | term_beta_lam_invt0 u v : u -β-> v → term_beta_lam_invt (Ⲗ u) (Ⲗ v).
 
-Inductive term_beta_app_invt : term -> term -> Prop :=
-  | term_beta_app_invt0 u u' v : u -β-> u' -> term_beta_app_invt (u@v) (u'@v)
-  | term_beta_app_invt1 u v v' : v -β-> v' -> term_beta_app_invt (u@v) (u@v')
+Inductive term_beta_app_invt : term → term → Prop :=
+  | term_beta_app_invt0 u u' v : u -β-> u' → term_beta_app_invt (u@v) (u'@v)
+  | term_beta_app_invt1 u v v' : v -β-> v' → term_beta_app_invt (u@v) (u@v')
   | term_beta_app_invt2 u v : term_beta_app_invt (Ⲗ u@v) (u⌈v⌉)
   .
 
 Fact term_beta_inv' u v :
     u -β-> v 
- -> match u with
+  → match u with
     | £ _  => False
     | Ⲗ _  => term_beta_lam_invt u v
     | _@_  => term_beta_app_invt u v
@@ -315,7 +315,7 @@ Qed.
 (** We study strong normalization *)
 
 (*
-Definition term_beta_normal u := forall v, ~ u -β-> v.
+Definition term_beta_normal u := ∀v, ~ u -β-> v.
 
 Fact term_var_beta_normal x : term_beta_normal (£x).
 Proof. now intros ? ?%term_beta_inv. Qed.
@@ -475,10 +475,10 @@ Theorem term_beta_sn_ctx C a u : ctx C → SN a → SN (C⌈u⌈a⌉⌉) → SN 
 Proof. intros HC; apply term_beta_sn_ctx_sig with (C := exist _ C HC). Qed.
 
 (* An alternate, more modular proof *)
-Lemma term_beta_sn_app' a u m : SN a → SN (u⌈a⌉ @* m) → SN (Ⲗ u @* a::m).
+Lemma term_beta_sn_app' a u m : SN a → SN (u⌈a⌉ @* m) → SN ((Ⲗ u@a) @* m).
 Proof.
   intros H1 H2.
-  replace (Ⲗ u @* a::m) with ((£0 @* map ↑ m)⌈Ⲗ u @ a⌉).
+  replace ((Ⲗ u@a) @* m) with ((£0 @* map ↑ m)⌈Ⲗ u @ a⌉).
   2: now rewrite term_app_lift_replace.
   apply term_beta_sn_ctx; auto.
   + apply term_app_ctx.
