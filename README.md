@@ -26,7 +26,9 @@ where "Γ ⊢ u ∶ A" := (F_Typing_Judgement Γ u A).
 ```
 
 ```
-Theorem FTJ_beta_sn Γ u A : Γ ⊢ u ∶ A -> SN u.
+Definition SN := Acc term_beta⁻¹.
+
+Theorem FTJ_beta_sn Γ u A : Γ ⊢ u ∶ A → SN u.
 ```
 
 To be able to implement such definitions, some infrastructure
